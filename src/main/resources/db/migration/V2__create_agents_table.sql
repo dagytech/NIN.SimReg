@@ -1,0 +1,7 @@
+CREATE TABLE agents (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    agent_code VARCHAR(255) NOT NULL UNIQUE,
+    full_name VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'ACTIVE',
+    daily_limit INT DEFAULT 20
+);

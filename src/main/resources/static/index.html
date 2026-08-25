@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="sw" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>SIM Registration</title>
+
+<!-- MUHIMU: zuia browser/simu kutafsiri ukurasa - majina ya watu (identity data)
+     hayapaswi KAMWE kutafsiriwa kiotomatiki (mfano "Juma" ikawa "Friday") -->
+<meta name="google" content="notranslate">
+<meta http-equiv="Content-Language" content="sw">
+
+<!-- ---- PWA: hii ndiyo inayoiruhusu simu "kusakinisha" app hii ---- -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SIM Reg">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: #eef1f6; color: #1a1d29;
+    display: flex; justify-content: center; min-height: 100vh; padding: 20px 0;
+  }
+  .phone {
+    width: 390px; max-width: 100vw; min-height: 780px;
+    background: #ffffff; border-radius: 34px; box-shadow: 0 20px 50px rgba(30,40,70,0.18);
+    border: 8px solid #1a1d29; position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .statusbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 22px 4px; font-size: 13px; color: #6b7280; font-weight: 600;
+  }
+  .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 130px; height: 22px; background: #1a1d29; border-radius: 0 0 14px 14px; }
+
+  .appbar { display: flex; align-items: center; gap: 10px; padding: 6px 18px 14px; }
+  .appbar .back { width: 34px; height: 34px; border-radius: 50%; background: #eef1f6;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #2563eb; font-size: 18px; border: none; }
+  .appbar .title { font-size: 17px; font-weight: 700; color: #111827; }
+  .appbar .sub { font-size: 12px; color: #6b7280; }
+
+  .progress { display: flex; gap: 6px; padding: 0 22px 14px; }
+  .progress .dot { flex: 1; height: 4px; border-radius: 4px; background: #e5e9f0; }
+  .progress .dot.active { background: linear-gradient(90deg,#10b3a3,#2563eb); }
+
+  .content { flex: 1; padding: 4px 22px 90px; overflow-y: auto; }
+  .screen { display: none; animation: fadeIn .25s ease; }
+  .screen.show { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+
+  h1.hero { font-size: 22px; margin: 6px 0 4px; color: #111827; }
+  p.hint { color: #6b7280; font-size: 13px; margin: 0 0 18px; line-height: 1.5; }
+
+  label { display: block; font-size: 12px; color: #4b5563; margin: 14px 0 6px; font-weight: 700; letter-spacing: .3px; }
+  input, select {
+    width: 100%; padding: 13px 14px; border-radius: 12px; border: 1.5px solid #e2e6ee;
+    background: #f8f9fc; color: #111827; font-size: 15px; outline: none;
+  }
+  input:focus, select:focus { border-color: #2563eb; background: #ffffff; }
+  ::placeholder { color: #a3aab8; }
+
+  .btn {
+    width: 100%; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700;
+    background: linear-gradient(90deg,#10b3a3,#2563eb); color: #ffffff; margin-top: 20px; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(37,99,235,0.25);
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn.secondary { background: #eef1f6; color: #374151; box-shadow: none; }
+  .btn.ghost { background: transparent; color: #2563eb; border: 1.5px solid #e2e6ee; box-shadow: none; }
+
+  .card { background: #f8f9fc; border: 1px solid #e2e6ee; border-radius: 16px; padding: 16px; margin-top: 14px; }
+  .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecf2; font-size: 14px; }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: #6b7280; }
+  .row .v { color: #111827; font-weight: 700; }
+
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .badge.ok { background: #d9f7ef; color: #0d9668; }
+  .badge.pending { background: #fef3c7; color: #b45309; }
+  .badge.err { background: #fde2e2; color: #c2280f; }
+
+  .fp-circle {
+    width: 130px; height: 130px; border-radius: 50%; margin: 10px auto 6px;
+    background: radial-gradient(circle at 50% 40%, #eaf1ff, #f8f9fc);
+    border: 2px solid #dbe4f5; display: flex; align-items: center; justify-content: center; font-size: 56px;
+    box-shadow: 0 6px 18px rgba(37,99,235,0.12);
+  }
+  .center { text-align: center; }
+
+  .msg { margin-top: 14px; font-size: 13px; font-weight: 700; padding: 10px 12px; border-radius: 10px; display:none; }
+  .msg.show { display: block; }
+  .msg.err { background: #fde2e2; color: #c2280f; }
+  .msg.ok { background: #d9f7ef; color: #0d9668; }
+
+  .bottomnav {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 74px;
+    background: #ffffff; border-top: 1px solid #e9ecf2;
+    display: flex; align-items: center; justify-content: space-around; padding-bottom: 10px;
+  }
+  .navitem { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #9aa1ae; font-size: 11px; cursor: pointer; font-weight: 600; }
+  .navitem.active { color: #2563eb; }
+  .navitem .ic { font-size: 20px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid #e9ecf2; }
+  th { color: #6b7280; font-weight: 700; }
+</style>
+</head>
+<body class="notranslate">
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+
+  <div class="appbar">
+    <button class="back" onclick="goBack()" id="backBtn" style="visibility:hidden">←</button>
+    <div>
+      <div class="title" id="appTitle">Sajili SIM</div>
+      <div class="sub" id="appSub">NIDA eKYC</div>
+    </div>
+  </div>
+
+  <div class="progress" id="progressBar"></div>
+
+  <div class="content">
+
+    <div class="screen show" id="screen-nin">
+      <h1 class="hero">Ingiza NIN yako</h1>
+      <p class="hint">Tutathibitisha namba yako ya NIDA kabla ya kuendelea. NIN za majaribio: 19900101-12345-00001-12</p>
+      <label>National ID Number (NIN)</label>
+      <input id="ninInput" placeholder="19900101-12345-00001-12">
+      <button class="btn" onclick="doVerifyNin()">Thibitisha NIN</button>
+      <div class="msg" id="msg-nin"></div>
+    </div>
+
+    <div class="screen" id="screen-bio">
+      <h1 class="hero">Weka Alama ya Kidole</h1>
+      <p class="hint">Gusa sensor ya fingerprint kwenye kifaa chako kuendelea (majaribio: FP-TEMPLATE-0001)</p>
+      <div class="fp-circle" onclick="simulateFingerScan()">🫆</div>
+      <p class="center hint">Bonyeza duara hapo juu kuiga (simulate) kuchanganua kidole</p>
+      <label>Fingerprint Scan (mock)</label>
+      <input id="fpInput" placeholder="FP-TEMPLATE-0001">
+      <button class="btn" onclick="doVerifyBiometric()">Thibitisha Alama ya Kidole</button>
+      <div class="msg" id="msg-bio"></div>
+    </div>
+
+    <div class="screen" id="screen-profile">
+      <h1 class="hero">Thibitisha Utambulisho</h1>
+      <p class="hint">Haya ndiyo majina yaliyorekodiwa NIDA. Hakikisha ni sahihi kabla ya kuendelea.</p>
+      <div class="card">
+        <div class="row"><span class="k">Jina la kwanza</span><span class="v" id="p-first">-</span></div>
+        <div class="row"><span class="k">Jina la kati</span><span class="v" id="p-middle">-</span></div>
+        <div class="row"><span class="k">Jina la mwisho</span><span class="v" id="p-last">-</span></div>
+        <div class="row"><span class="k">Tarehe ya kuzaliwa</span><span class="v" id="p-dob">-</span></div>
+        <div class="row"><span class="k">NIN Status</span><span class="v"><span class="badge ok">✓ VERIFIED</span></span></div>
+        <div class="row"><span class="k">Biometric Status</span><span class="v"><span class="badge ok">✓ VERIFIED</span></span></div>
+      </div>
+      <button class="btn" onclick="showScreen('reg')">Hii Ni Sahihi, Endelea</button>
+    </div>
+
+    <div class="screen" id="screen-reg">
+      <h1 class="hero">Taarifa za SIM</h1>
+      <p class="hint">Weka namba ya simu unayotaka kusajili na mtandao husika</p>
+      <label>Namba ya Simu (Mobile Number)</label>
+      <input id="regMobile" placeholder="0712345678">
+      <label>Mtandao (MNO)</label>
+      <select id="regMno">
+        <option>Vodacom</option><option>Airtel</option><option>Tigo</option><option>Halotel</option>
+      </select>
+      <label>Agent Code (hiari - acha wazi kama self-service)</label>
+      <input id="regAgentCode" placeholder="AGT001">
+      <button class="btn" onclick="doStartRegistration()">Anzisha Usajili</button>
+      <div class="msg" id="msg-reg"></div>
+    </div>
+
+    <div class="screen" id="screen-otp">
+      <h1 class="hero">Thibitisha kwa OTP</h1>
+      <p class="hint">Tumetuma OTP kwenye namba yako (angalia terminal ya server kwa OTP ya majaribio)</p>
+      <div class="card center">
+        <div style="font-size:13px;color:#6b7280">Reference</div>
+        <div style="font-size:13px;color:#2563eb;word-break:break-all" id="otp-ref">-</div>
+      </div>
+      <label>OTP Code</label>
+      <input id="otpInput" placeholder="123456" maxlength="6">
+      <button class="btn" onclick="doApprove()">Idhinisha</button>
+      <div class="msg" id="msg-otp"></div>
+    </div>
+
+    <div class="screen" id="screen-complete">
+      <div class="center" style="margin-top:20px">
+        <div style="font-size:60px">✅</div>
+        <h1 class="hero">Tayari Kusajili SIM</h1>
+        <p class="hint">Bonyeza chini kukamilisha usajili na MNO + Regulator</p>
+      </div>
+      <button class="btn" onclick="doRegisterSim()">Kamilisha Usajili wa SIM</button>
+      <div class="msg" id="msg-complete"></div>
+      <div class="card" id="statusCard" style="display:none">
+        <div class="row"><span class="k">Reference</span><span class="v" id="c-ref" style="font-size:11px">-</span></div>
+        <div class="row"><span class="k">Namba</span><span class="v" id="c-mobile">-</span></div>
+        <div class="row"><span class="k">Mtandao</span><span class="v" id="c-mno">-</span></div>
+        <div class="row"><span class="k">Status</span><span class="v" id="c-status">-</span></div>
+      </div>
+      <button class="btn secondary" onclick="resetFlow()">Sajili SIM Nyingine</button>
+    </div>
+
+    <div class="screen" id="screen-mysims">
+      <h1 class="hero">SIMs Zangu</h1>
+      <label>NIN</label>
+      <input id="simsNin" placeholder="19900101-12345-00001-12">
+      <button class="btn" onclick="loadMySims()">Angalia SIMs</button>
+      <table id="simsTable"><tr><th>Namba</th><th>Mtandao</th><th>Status</th></tr></table>
+    </div>
+
+    <div class="screen" id="screen-checkstatus">
+      <h1 class="hero">Angalia Status</h1>
+      <label>Reference</label>
+      <input id="statusRefInput" placeholder="reference ya usajili">
+      <button class="btn" onclick="doCheckStatus()">Angalia</button>
+      <div class="card" id="statusResultCard" style="display:none">
+        <div class="row"><span class="k">Jina</span><span class="v" id="s-name">-</span></div>
+        <div class="row"><span class="k">Namba</span><span class="v" id="s-mobile">-</span></div>
+        <div class="row"><span class="k">Mtandao</span><span class="v" id="s-mno">-</span></div>
+        <div class="row"><span class="k">Status</span><span class="v" id="s-status">-</span></div>
+      </div>
+      <div class="msg" id="msg-status"></div>
+    </div>
+
+    <!-- SCREEN: STAFF (JWT vs Session demo) -->
+    <div class="screen" id="screen-staff">
+      <h1 class="hero">Staff Access</h1>
+      <p class="hint">Majaribio: admin/admin123 (ADMIN) au agent1/agent123 (AGENT)</p>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">🔑 JWT Login (Stateless)</div>
+        <label>Username</label>
+        <input id="jwtUser" placeholder="admin">
+        <label>Password</label>
+        <input id="jwtPass" type="password" placeholder="admin123">
+        <button class="btn" onclick="doJwtLogin()">Ingia (JWT)</button>
+        <div class="msg" id="msg-jwt"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">🍪 Session Login (Stateful)</div>
+        <label>Username</label>
+        <input id="sessUser" placeholder="admin">
+        <label>Password</label>
+        <input id="sessPass" type="password" placeholder="admin123">
+        <button class="btn secondary" onclick="doSessionLogin()">Ingia (Session)</button>
+        <button class="btn ghost" onclick="doSessionLogout()">Toka (Logout - futa session)</button>
+        <div class="msg" id="msg-session"></div>
+      </div>
+
+      <button class="btn" onclick="loadStaffDashboard()">Angalia Dashboard (Session)</button>
+      <div class="card" id="staffStatsCard" style="display:none">
+        <div class="row"><span class="k">Wateja Wote</span><span class="v" id="st-customers">-</span></div>
+        <div class="row"><span class="k">Usajili Wote</span><span class="v" id="st-total">-</span></div>
+        <div class="row"><span class="k">Umekamilika</span><span class="v" id="st-completed">-</span></div>
+        <div class="row"><span class="k">Bado Pending</span><span class="v" id="st-pending">-</span></div>
+        <div class="row"><span class="k">Matukio ya Usalama (50 za mwisho)</span><span class="v" id="st-security">-</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottomnav">
+    <div class="navitem active" id="nav-register" onclick="goTab('register')">
+      <div class="ic">📇</div><div>Sajili</div>
+    </div>
+    <div class="navitem" id="nav-mysims" onclick="goTab('mysims')">
+      <div class="ic">📱</div><div>SIMs Zangu</div>
+    </div>
+    <div class="navitem" id="nav-status" onclick="goTab('status')">
+      <div class="ic">🔎</div><div>Status</div>
+    </div>
+    <div class="navitem" id="nav-staff" onclick="goTab('staff')">
+      <div class="ic">🛡️</div><div>Staff</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let deviceFingerprint = 'device-' + Math.random().toString(36).slice(2, 10);
+let state = { nin: null, reference: null };
+
+const flowSteps = ['nin', 'bio', 'profile', 'reg', 'otp', 'complete'];
+const titles = {
+  nin: ['Sajili SIM', 'Hatua 1 - Thibitisha NIN'],
+  bio: ['Sajili SIM', 'Hatua 2 - Fingerprint'],
+  profile: ['Sajili SIM', 'Hatua 3 - Utambulisho'],
+  reg: ['Sajili SIM', 'Hatua 4 - Taarifa za SIM'],
+  otp: ['Sajili SIM', 'Hatua 5 - OTP'],
+  complete: ['Sajili SIM', 'Hatua 6 - Kamilisha'],
+  mysims: ['SIMs Zangu', 'Historia ya usajili'],
+  checkstatus: ['Angalia Status', 'Fuatilia usajili'],
+  staff: ['Staff Access', 'JWT (stateless) na Session (stateful)']
+};
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('show'));
+  document.getElementById('screen-' + name).classList.add('show');
+  document.getElementById('appTitle').textContent = titles[name][0];
+  document.getElementById('appSub').textContent = titles[name][1];
+
+  const idx = flowSteps.indexOf(name);
+  const bar = document.getElementById('progressBar');
+  if (idx >= 0) {
+    bar.style.display = 'flex';
+    bar.innerHTML = flowSteps.map((s, i) => `<div class="dot ${i <= idx ? 'active' : ''}"></div>`).join('');
+  } else {
+    bar.style.display = 'none';
+  }
+  document.getElementById('backBtn').style.visibility = (idx > 0) ? 'visible' : 'hidden';
+  window.currentScreen = name;
+}
+
+function goBack() {
+  const idx = flowSteps.indexOf(window.currentScreen);
+  if (idx > 0) showScreen(flowSteps[idx - 1]);
+}
+
+function goTab(tab) {
+  document.querySelectorAll('.navitem').forEach(n => n.classList.remove('active'));
+  if (tab === 'register') { document.getElementById('nav-register').classList.add('active'); showScreen('nin'); }
+  if (tab === 'mysims') { document.getElementById('nav-mysims').classList.add('active'); showScreen('mysims'); }
+  if (tab === 'status') { document.getElementById('nav-status').classList.add('active'); showScreen('checkstatus'); }
+  if (tab === 'staff') { document.getElementById('nav-staff').classList.add('active'); showScreen('staff'); }
+}
+
+function showMsg(id, text, ok) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg show ' + (ok ? 'ok' : 'err');
+}
+
+async function postJson(url, body) {
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    return { ok: res.ok, data };
+  } catch (e) {
+    return { ok: false, data: { error: 'Imeshindikana kuunganisha na server' } };
+  }
+}
+
+// ============================================================
+// USALAMA: API Key + HMAC Signature (kwa mtiririko wa mteja)
+// ============================================================
+// KUMBUKA: Kwenye mobile app HALISI, hizi "siri" mbili HAZIANDIKWI wazi
+// kwenye JavaScript kama hapa - zingefichwa (obfuscated) ndani ya code ya
+// asili ya app (Kotlin/Swift), au zingepatikana kupitia "secure enclave"
+// ya kifaa. Hapa tunaziandika wazi kwa ajili ya MAFUNZO TU, ili uone jinsi
+// uhesabu wa signature unavyofanya kazi.
+const API_KEY = 'SIMREG-MOBILE-APP-2026-9f3a7c1e';
+const SIGNING_SECRET = 'b7e2f9c4a1d68e3f0c5b9a2d7e4f1c8b3a6d9e0f2c5b8a1d4e7f0c3b6a9d2e5f';
+
+async function hmacSha256Hex(message, secret) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sigBuffer = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+  return Array.from(new Uint8Array(sigBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// securePost = fetch ya kawaida + API Key + Timestamp + Nonce + HMAC Signature
+// Hii ndiyo "mlango" pekee unaotumika kwa endpoints za usajili (verify-nin,
+// verify-biometric, start-registration, approve-registration, register-sim)
+async function securePost(path, bodyObj) {
+  const body = JSON.stringify(bodyObj);
+  const timestamp = Date.now().toString();
+  const nonce = crypto.randomUUID();
+
+  // Hii "payload" LAZIMA ilingane KABISA na jinsi server (HmacSignatureFilter.java)
+  // inavyohesabu signature yake - method|path|timestamp|nonce|body
+  const payload = `POST|${path}|${timestamp}|${nonce}|${body}`;
+  const signature = await hmacSha256Hex(payload, SIGNING_SECRET);
+
+  try {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': API_KEY,
+        'X-Timestamp': timestamp,
+        'X-Nonce': nonce,
+        'X-Signature': signature
+      },
+      body
+    });
+    const data = await res.json();
+    return { ok: res.ok, data };
+  } catch (e) {
+    return { ok: false, data: { error: 'Imeshindikana kuunganisha na server' } };
+  }
+}
+
+function simulateFingerScan() {
+  document.getElementById('fpInput').value = 'FP-TEMPLATE-0001';
+}
+
+async function doVerifyNin() {
+  const nin = document.getElementById('ninInput').value.trim();
+  if (!nin) { showMsg('msg-nin', 'Weka NIN kwanza', false); return; }
+  const { ok, data } = await securePost('/verify-nin', { nin });
+  if (ok) {
+    state.nin = nin;
+    showMsg('msg-nin', '✅ NIN imethibitishwa: ' + data.firstName + ' ' + data.lastName, true);
+    setTimeout(() => showScreen('bio'), 600);
+  } else {
+    showMsg('msg-nin', '❌ ' + data.error, false);
+  }
+}
+
+async function doVerifyBiometric() {
+  const fp = document.getElementById('fpInput').value.trim();
+  const { ok, data } = await securePost('/verify-biometric', { nin: state.nin, fingerprintScan: fp });
+  if (ok) {
+    document.getElementById('p-first').textContent = data.firstName || '-';
+    document.getElementById('p-middle').textContent = data.middleName || '-';
+    document.getElementById('p-last').textContent = data.lastName || '-';
+    document.getElementById('p-dob').textContent = data.dateOfBirth || '-';
+    showMsg('msg-bio', '✅ Fingerprint imethibitishwa', true);
+    setTimeout(() => showScreen('profile'), 500);
+  } else {
+    showMsg('msg-bio', '❌ ' + data.error, false);
+  }
+}
+
+async function doStartRegistration() {
+  const body = {
+    nin: state.nin,
+    mobileNumber: document.getElementById('regMobile').value.trim(),
+    mno: document.getElementById('regMno').value,
+    agentCode: document.getElementById('regAgentCode').value.trim() || null,
+    deviceFingerprint: deviceFingerprint,
+    ipAddress: '127.0.0.1'
+  };
+  const { ok, data } = await securePost('/start-registration', body);
+  if (ok) {
+    state.reference = data.reference;
+    document.getElementById('otp-ref').textContent = data.reference;
+    showMsg('msg-reg', '✅ Usajili umeanzishwa', true);
+    setTimeout(() => showScreen('otp'), 500);
+  } else {
+    showMsg('msg-reg', '❌ ' + data.error, false);
+  }
+}
+
+async function doApprove() {
+  const otp = document.getElementById('otpInput').value.trim();
+  const { ok, data } = await securePost('/approve-registration', { reference: state.reference, otpCode: otp });
+  if (ok) {
+    showMsg('msg-otp', '✅ Umeidhinishwa', true);
+    setTimeout(() => showScreen('complete'), 500);
+  } else {
+    showMsg('msg-otp', '❌ ' + data.error, false);
+  }
+}
+
+async function doRegisterSim() {
+  const { ok, data } = await securePost('/register-sim', { reference: state.reference });
+  if (ok) {
+    document.getElementById('statusCard').style.display = 'block';
+    document.getElementById('c-ref').textContent = data.reference;
+    document.getElementById('c-mobile').textContent = data.mobileNumber;
+    document.getElementById('c-mno').textContent = data.mno;
+    document.getElementById('c-status').innerHTML = '<span class="badge ok">' + data.status + '</span>';
+    showMsg('msg-complete', '🎉 SIM imesajiliwa kikamilifu!', true);
+  } else {
+    showMsg('msg-complete', '❌ ' + data.error, false);
+  }
+}
+
+function resetFlow() {
+  state = { nin: null, reference: null };
+  ['ninInput','fpInput','regMobile','regAgentCode','otpInput'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('statusCard').style.display = 'none';
+  document.querySelectorAll('.msg').forEach(m => m.classList.remove('show'));
+  goTab('register');
+}
+
+async function loadMySims() {
+  const nin = document.getElementById('simsNin').value.trim();
+  const res = await fetch(`/customer-sims/${nin}`);
+  const list = await res.json();
+  const table = document.getElementById('simsTable');
+  table.innerHTML = '<tr><th>Namba</th><th>Mtandao</th><th>Status</th></tr>';
+  (list || []).forEach(r => {
+    table.innerHTML += `<tr><td>${r.mobileNumber}</td><td>${r.mno}</td><td>${r.status}</td></tr>`;
+  });
+}
+
+async function doCheckStatus() {
+  const ref = document.getElementById('statusRefInput').value.trim();
+  const res = await fetch(`/registration-status/${ref}`);
+  const data = await res.json();
+  if (res.ok) {
+    document.getElementById('statusResultCard').style.display = 'block';
+    document.getElementById('s-name').textContent = data.customerFullName;
+    document.getElementById('s-mobile').textContent = data.mobileNumber;
+    document.getElementById('s-mno').textContent = data.mno;
+    document.getElementById('s-status').innerHTML = '<span class="badge ok">' + data.status + '</span>';
+    document.getElementById('msg-status').classList.remove('show');
+  } else {
+    document.getElementById('statusResultCard').style.display = 'none';
+    showMsg('msg-status', '❌ ' + data.error, false);
+  }
+}
+
+// ============================================================
+// STAFF: JWT (stateless) na SESSION (stateful) - majaribio
+// ============================================================
+let jwtToken = null; // itahifadhiwa kwenye JS variable tu (siyo localStorage) kwa mfano huu
+
+async function doJwtLogin() {
+  const username = document.getElementById('jwtUser').value.trim();
+  const password = document.getElementById('jwtPass').value.trim();
+  const res = await fetch('/staff/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    jwtToken = data.token;
+    showMsg('msg-jwt', `✅ JWT imepokelewa (${data.role}) - inaisha muda dakika ${data.expiresInMinutes}. Token: ${data.token.substring(0,24)}...`, true);
+  } else {
+    showMsg('msg-jwt', '❌ ' + data.error, false);
+  }
+}
+
+async function doSessionLogin() {
+  const username = document.getElementById('sessUser').value.trim();
+  const password = document.getElementById('sessPass').value.trim();
+  const res = await fetch('/admin-panel/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',   // MUHIMU - inaruhusu browser kuhifadhi JSESSIONID cookie
+    body: JSON.stringify({ username, password })
+  });
+  const data = await res.json();
+  showMsg('msg-session', res.ok
+    ? `✅ Session imeanzishwa (sessionId: ${data.sessionId.substring(0,12)}...) - cookie imehifadhiwa kwenye browser`
+    : '❌ ' + data.error, res.ok);
+}
+
+async function doSessionLogout() {
+  const res = await fetch('/admin-panel/logout', { method: 'POST', credentials: 'include' });
+  const data = await res.json();
+  showMsg('msg-session', '🚪 ' + data.message, true);
+  document.getElementById('staffStatsCard').style.display = 'none';
+}
+
+async function loadStaffDashboard() {
+  const res = await fetch('/admin-panel/dashboard', { credentials: 'include' });
+  const data = await res.json();
+  if (!res.ok) {
+    showMsg('msg-session', '❌ ' + (data.error || 'Ingia kwa Session kwanza'), false);
+    return;
+  }
+  document.getElementById('staffStatsCard').style.display = 'block';
+  document.getElementById('st-customers').textContent = data.totalCustomers;
+  document.getElementById('st-total').textContent = data.totalRegistrations;
+  document.getElementById('st-completed').textContent = data.completedRegistrations;
+  document.getElementById('st-pending').textContent = data.pendingRegistrations;
+  document.getElementById('st-security').textContent = data.securityEventsLast50;
+}
+
+showScreen('nin');
+
+// ---- PWA: sajili service worker (sharti la kiufundi la "installability") ----
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
